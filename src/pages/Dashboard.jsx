@@ -1,5 +1,5 @@
 import { useBookClub } from "../context/BookClubContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { BookOpen, MessageSquare, Calendar, Star,TrendingUp } from "lucide-react";
