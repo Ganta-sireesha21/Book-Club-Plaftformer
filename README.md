@@ -1,16 +1,101 @@
-# React + Vite
+## Project Title
+Book Club Plaftform
+A Community-Based Reading Management Web Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+## Project Description
 
-Currently, two official plugins are available:
+The Book Club Platform is a full-stack web application designed to bring book lovers together in a collaborative digital environment.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+It allows users to:
 
-## React Compiler
+Suggest and vote on books
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Participate in discussions
 
-## Expanding the ESLint configuration
+Write reviews and ratings
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Track reading progress
+
+Set reading goals
+
+Schedule and join virtual meetings
+
+Personal Library
+
+The platform ensures secure data access using Supabase Row Level Security (RLS) policies and JWT-based authentication.
+
+## Features
+
+User Registration & Login (Axios + Supabase Auth)
+
+Book Suggestions
+
+Voting on Books
+
+Discussion Forum
+
+Reply & Like System
+
+Reviews & Ratings
+
+Reading Progress Tracking
+
+Reading Goals
+
+Virtual Meeting Scheduling
+
+RSVP to Meetings
+
+Personal Library Management 
+
+
+
+## Tech Stack Used
+ Frontend 
+
+ React (Vite)
+
+ Tailwind CSS
+
+ ShadCN UI
+
+ Framer Motion
+
+ Axios (API Communication)
+
+ ## Installation Steps
+ git clone
+ 
+ npm install 
+   
+ npm run dev
+
+ The application will start at:http://localhost:5173
+
+## Deployment Link
+book-club-platformer.netlify.app
+
+## Login Credentials
+sireeshaganta021@gmail.com
+Reema@2107
+
+
+## Screenshot
+![App Screenshots]
+(./assets/screenshot(254).png)
+(./assets/screenshot(255).png)
+(./assets/screenshot(256).png)
+(./assets/screenshot(257).png)
+(./assets/screenshot(258).png)
+(./assets/screenshot(259).png)
+(./assets/screenshot(260).png)
+(./assets/screenshot(261).png)
+(./assets/screenshot(262).png)
+(./assets/screenshot(263).png)
+(./assets/screenshot(264).png)
+(./assets/screenshot(265).png)
+(./assets/screenshot(266).png)
+
+
+## Video link
+https://drive.google.com/file/d/1eR3QOp4aiXctVTsfJ3b13oYGG1Wh3Zlx/view?usp=sharing
