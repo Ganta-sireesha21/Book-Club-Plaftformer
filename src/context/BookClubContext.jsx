@@ -371,6 +371,22 @@ const addMeeting = useCallback((meeting) => {
     user: "You",
   })
 }, [addNotification, addActivity])
+const rsvpMeeting = useCallback((meetingId, userName) => {
+  setMeetings((prev) =>
+    prev.map((m) => {
+      if (m.id !== meetingId) return m
+
+      const alreadyGoing = m.rsvps.includes(userName)
+
+      return {
+        ...m,
+        rsvps: alreadyGoing
+          ? m.rsvps.filter((u) => u !== userName)
+          : [...m.rsvps, userName],
+      }
+    })
+  )
+}, [])
     
 
 
@@ -391,6 +407,7 @@ const addMeeting = useCallback((meeting) => {
         progress,
         goals,
         meetings,
+        rsvpMeeting,
         library,
         achievements,
         notifications,

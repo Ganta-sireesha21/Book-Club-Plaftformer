@@ -1,3 +1,4 @@
+import Meetings from "@/pages/Meetings";
 import api from "./api";
 
 /* 🔐 Login */
@@ -35,3 +36,11 @@ export const updatePasswordUser = (token, password) => {
     }
   );
 };
+export const updateMeetings = (token, Meetings) => {
+api.get("/rest/v1/meetings", {
+  headers: {
+    Authorization: `Bearer ${token}`,
+    apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+  }
+});
+}
