@@ -1,9 +1,10 @@
 import { useState } from "react"
 import { useBookClub } from "@/context/BookClubContext"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+
 import {
   Select,
   SelectContent,
@@ -11,35 +12,40 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogDescription,
 } from "@/components/ui/dialog"
+
 import { Calendar } from "@/components/ui/calendar"
-import { Video, Plus, Users, ExternalLink } from "lucide-react"
+
+import { Plus, Users, ExternalLink } from "lucide-react"
 import { motion } from "framer-motion"
 
 export default function Meetings() {
-  const { meetings, books, addMeeting, rsvpMeeting } =
-    useBookClub()
+
+  const { meetings, books, addMeeting, rsvpMeeting } = useBookClub()
 
   const [open, setOpen] = useState(false)
+
   const [form, setForm] = useState({
     title: "",
     bookId: "",
     time: "19:00",
     duration: "1 hour",
     platform: "zoom",
+    link: "",
   })
 
-  const [selectedDate, setSelectedDate] = useState(
-    new Date()
-  )
+  const [selectedDate, setSelectedDate] = useState(new Date())
 
   const handleSubmit = () => {
+
     if (!form.title || !selectedDate) return
 
     addMeeting({
@@ -49,37 +55,42 @@ export default function Meetings() {
       time: form.time,
       duration: form.duration,
       platform: form.platform,
-      link: "#",
+      link: form.link,
       createdBy: "You",
     })
 
     setOpen(false)
+
     setForm({
       title: "",
       bookId: "",
       time: "19:00",
       duration: "1 hour",
       platform: "zoom",
+      link: "",
     })
   }
 
-  const meetingDates = meetings.map((m) =>
-    new Date(m.date)
-  )
+  const meetingDates = meetings.map((m) => new Date(m.date))
 
   return (
     <div className="space-y-6 max-w-5xl">
+
+      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-4">
+
         <div>
           <h1 className="font-display text-3xl font-bold">
             Virtual Meetings
           </h1>
+
           <p className="text-muted-foreground mt-1">
             Schedule and join book club meetings.
           </p>
         </div>
 
         <Dialog open={open} onOpenChange={setOpen}>
+
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-1" />
@@ -88,20 +99,37 @@ export default function Meetings() {
           </DialogTrigger>
 
           <DialogContent>
+
             <DialogHeader>
               <DialogTitle className="font-display">
                 Schedule a Meeting
               </DialogTitle>
             </DialogHeader>
 
+            <DialogDescription>
+              Fill in the details to schedule a new meeting.
+            </DialogDescription>
+
             <div className="space-y-3">
+
               <Input
-                placeholder="Meeting title"
-                value={form.title}
+                placeholder="Meeting Title"
+                value={form.title || ""}
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
                     title: e.target.value,
+                  }))
+                }
+              />
+
+              <Input
+                placeholder="Meeting Link (https://...)"
+                value={form.link || ""}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    link: e.target.value,
                   }))
                 }
               />
@@ -121,17 +149,16 @@ export default function Meetings() {
 
                 <SelectContent>
                   {books.map((b) => (
-                    <SelectItem
-                      key={b.id}
-                      value={b.id}
-                    >
+                    <SelectItem key={b.id} value={b.id}>
                       {b.title}
                     </SelectItem>
                   ))}
                 </SelectContent>
+
               </Select>
 
               <div className="flex gap-2">
+
                 <Input
                   type="time"
                   value={form.time}
@@ -153,6 +180,7 @@ export default function Meetings() {
                     }))
                   }
                 />
+
               </div>
 
               <Select
@@ -164,18 +192,16 @@ export default function Meetings() {
                   }))
                 }
               >
+
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
 
                 <SelectContent>
-                  <SelectItem value="zoom">
-                    Zoom
-                  </SelectItem>
-                  <SelectItem value="google-meet">
-                    Google Meet
-                  </SelectItem>
+                  <SelectItem value="zoom">Zoom</SelectItem>
+                  <SelectItem value="google-meet">Google Meet</SelectItem>
                 </SelectContent>
+
               </Select>
 
               <Calendar
@@ -185,21 +211,26 @@ export default function Meetings() {
                 className="rounded-md border mx-auto"
               />
 
-              <Button
-                onClick={handleSubmit}
-                className="w-full"
-              >
+              <Button onClick={handleSubmit} className="w-full">
                 Schedule
               </Button>
+
             </div>
+
           </DialogContent>
+
         </Dialog>
       </div>
 
+
+      {/* Calendar + Meetings */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
         <div className="lg:col-span-2">
+
           <Card>
             <CardContent className="p-4">
+
               <Calendar
                 mode="single"
                 selected={selectedDate}
@@ -214,38 +245,45 @@ export default function Meetings() {
                 }}
                 className="mx-auto"
               />
+
             </CardContent>
           </Card>
+
         </div>
 
-        <div className="lg:col-span-3 space-y-4">
-          {meetings.map((m, i) => {
-            const book = books.find(
-              (b) => b.id === m.bookId
-            )
 
-            const isRsvpd = m.rsvps.includes("You")
+        {/* Meetings list */}
+        <div className="lg:col-span-3 space-y-4">
+
+          {meetings.map((m, i) => {
+
+            const book = books.find((b) => b.id === m.bookId)
+
+            const isRsvpd = (m.rsvps || []).includes("You")
 
             return (
+
               <motion.div
                 key={m.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
               >
+
                 <Card>
+
                   <CardContent className="p-4">
+
                     <div className="flex items-start justify-between gap-4">
+
                       <div className="space-y-1">
+
                         <h3 className="font-display font-semibold">
                           {m.title}
                         </h3>
 
                         <p className="text-sm text-muted-foreground">
-                          {new Date(
-                            m.date
-                          ).toLocaleDateString()}{" "}
-                          at {m.time} · {m.duration}
+                          {new Date(m.date).toLocaleDateString()} at {m.time} · {m.duration}
                         </p>
 
                         {book && (
@@ -257,49 +295,51 @@ export default function Meetings() {
                         <div className="flex items-center gap-1 mt-2">
                           <Users className="h-4 w-4 text-muted-foreground" />
                           <span className="text-sm text-muted-foreground">
-                            {m.rsvps.length} attending
+                            {(m.rsvps || []).length} attending
                           </span>
                         </div>
+
                       </div>
+
 
                       <div className="flex flex-col gap-2 shrink-0">
-                        <Button
-                          variant={
-                            isRsvpd
-                              ? "default"
-                              : "outline"
-                          }
-                          size="sm"
-                          onClick={() =>
-                            rsvpMeeting(
-                              m.id,
-                              "You"
-                            )
-                          }
-                        >
-                          {isRsvpd
-                            ? "Going ✓"
-                            : "RSVP"}
-                        </Button>
 
                         <Button
-                          variant="ghost"
+                          variant={isRsvpd ? "default" : "outline"}
                           size="sm"
+                          onClick={() => rsvpMeeting(m.id, "You")}
                         >
-                          <ExternalLink className="h-4 w-4 mr-1" />
-                          {m.platform === "zoom"
-                            ? "Zoom"
-                            : "Meet"}
+                          {isRsvpd ? "Going ✓" : "RSVP"}
                         </Button>
+
+                        <a
+                          href={m.link || "#"}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Button variant="ghost" size="sm">
+                            <ExternalLink className="h-4 w-4 mr-1" />
+                            {m.platform === "zoom" ? "Zoom" : "Meet"}
+                          </Button>
+                        </a>
+
                       </div>
+
                     </div>
+
                   </CardContent>
+
                 </Card>
+
               </motion.div>
+
             )
           })}
+
         </div>
+
       </div>
+
     </div>
   )
 }

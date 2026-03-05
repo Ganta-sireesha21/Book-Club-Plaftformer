@@ -18,6 +18,7 @@ export default function ResetPassword() {
 
   useEffect(() => {
     const hash = window.location.hash;
+
     if (!hash.includes("type=recovery")) {
       navigate("/auth");
     }
@@ -40,45 +41,56 @@ export default function ResetPassword() {
     } else {
       toast({
         title: "Password updated",
-        description: "You can now sign in.",
+        description: "You can now sign in with your new password.",
       });
-      navigate("/auth");
+
+      navigate("/");
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
+
       <Card className="w-full max-w-md">
+
         <CardHeader>
-          <CardTitle>Set New Password</CardTitle>
+          <CardTitle className="font-display">
+            Set New Password
+          </CardTitle>
         </CardHeader>
 
         <CardContent>
+
           <form onSubmit={handleSubmit} className="space-y-4">
+
             <div className="space-y-2">
-              <Label>New Password</Label>
+              <Label htmlFor="password">New Password</Label>
+
               <div className="relative">
                 <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+
                 <Input
+                  id="password"
                   type="password"
-                  className="pl-10"
+                  placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="pl-10"
                   required
                   minLength={6}
                 />
+
               </div>
             </div>
 
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={submitting}
-            >
+            <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? "Updating…" : "Update Password"}
             </Button>
+
           </form>
+
         </CardContent>
+
       </Card>
     </div>
   );

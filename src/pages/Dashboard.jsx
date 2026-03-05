@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { BookOpen, MessageSquare, Calendar, Star,TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
+import { useAuth } from "@/context/AuthContext";
 
 const fade = {
   initial: { opacity: 0, y: 20 },
@@ -13,6 +14,7 @@ const fade = {
 }
 
 export default function Dashboard() {
+  const { profile } = useAuth();
   const {
     books,
     discussions,
@@ -63,7 +65,7 @@ export default function Dashboard() {
     <div className="space-y-6 max-w-7xl">
       <motion.div {...fade}>
         <h1 className="font-display text-3xl font-bold">
-          Welcome! 📖
+          Welcome {profile?.display_name || "Reader"} 📖
         </h1>
         <p className="text-muted-foreground mt-1">
           Here's what's happening in your book club.

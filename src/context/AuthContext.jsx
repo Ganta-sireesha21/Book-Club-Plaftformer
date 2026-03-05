@@ -1,130 +1,153 @@
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-} from "react";
-
-import {
-  loginUser,
-  registerUser,
-  resetPasswordUser,
-  updatePasswordUser,
-} from "@/services/authService";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { supabase } from "@/integrations/supabase/client";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(
-    JSON.parse(localStorage.getItem("user"))
-  );
-  const [token, setToken] = useState(
-    localStorage.getItem("token")
-  );
-  const [loading, setLoading] = useState(false);
 
-  /* 🔐 Login */
-  const signIn = useCallback(async (email, password) => {
-    setLoading(true);
-    try {
-      const res = await loginUser(email, password);
+  const [user, setUser] = useState(null);
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [profile, setProfile] = useState(null);
 
-      const { access_token, user } = res.data;
+  const fetchProfile = useCallback(async (userId) => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("display_name, email, avatar_url")
+      .eq("user_id", userId)
+      .single();
+      console.log("Profile Data:", data);
 
-      localStorage.setItem("token", access_token);
-      localStorage.setItem("user", JSON.stringify(user));
-
-      setUser(user);
-      setToken(access_token);
-
-      return { error: null };
-    } catch (error) {
-      return {
-        error:
-          error.response?.data?.error_description ||
-          "Login failed",
-      };
-    } finally {
-      setLoading(false);
-    }
+    if (data) setProfile(data);
   }, []);
 
-  /* 🆕 Register */
-  const signUp = useCallback(async (email, password) => {
-    setLoading(true);
-    try {
-      await registerUser(email, password);
-      return { error: null };
-    } catch (error) {
-      return {
-        error:
-          error.response?.data?.error_description ||
-          "Signup failed",
-      };
-    } finally {
-      setLoading(false);
-    }
+  const checkAdmin = useCallback(async (userId) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    setIsAdmin(!!data);
   }, []);
 
-  /* 📩 Send Reset Email */
-  const resetPassword = useCallback(async (email) => {
-    try {
-      await resetPasswordUser(email);
-      return { error: null };
-    } catch (error) {
-      return {
-        error:
-          error.response?.data?.error_description ||
-          "Reset failed",
-      };
-    }
-  }, []);
+  useEffect(() => {
 
-  /* 🔁 Update Password */
-  const updatePassword = useCallback(async (password) => {
-    try {
-      const hash = window.location.hash;
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get("access_token");
+    const { data: { subscription } } =
+      supabase.auth.onAuthStateChange((_event, session) => {
 
-      if (!accessToken) {
-        return { error: "Invalid recovery session" };
+        setSession(session);
+        setUser(session?.user ?? null);
+
+        if (session?.user) {
+
+          setTimeout(() => {
+            fetchProfile(session.user.id);
+            checkAdmin(session.user.id);
+          }, 0);
+
+        } else {
+          setProfile(null);
+          setIsAdmin(false);
+        }
+
+        setLoading(false);
+      });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+
+      setSession(session);
+      setUser(session?.user ?? null);
+
+      if (session?.user) {
+        fetchProfile(session.user.id);
+        checkAdmin(session.user.id);
       }
 
-      await updatePasswordUser(accessToken, password);
+      setLoading(false);
+    });
 
-      // Clear hash
-      window.location.hash = "";
+    return () => subscription.unsubscribe();
 
-      return { error: null };
-    } catch (error) {
-      return {
-        error:
-          error.response?.data?.error_description ||
-          "Password update failed",
-      };
+  }, [fetchProfile, checkAdmin]);
+
+  const signUp = useCallback(async (email, password, displayName) => {
+
+  try {
+
+    const { data, error } = await supabase.auth.signUp({
+      email: email,
+      password: password,
+      options: {
+        data: {
+          display_name: displayName
+        },
+        emailRedirectTo: window.location.origin
+      }
+    });
+
+    if (error) {
+      return { error: error.message };
     }
+
+    return { error: null };
+
+  } catch (err) {
+    return { error: "Signup failed. Please try again." };
+  }
+
+}, []);
+
+  const signIn = useCallback(async (email, password) => {
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    return { error: error?.message ?? null };
+
   }, []);
 
-  /* 🚪 Logout */
-  const signOut = useCallback(() => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUser(null);
-    setToken(null);
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  const resetPassword = useCallback(async (email) => {
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+
+    return { error: error?.message ?? null };
+
+  }, []);
+
+  const updatePassword = useCallback(async (password) => {
+
+    const { error } = await supabase.auth.updateUser({
+      password
+    });
+
+    return { error: error?.message ?? null };
+
   }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        token,
+        session,
         loading,
-        signIn,
+        isAdmin,
+        profile,
         signUp,
+        signIn,
         signOut,
         resetPassword,
-        updatePassword,
+        updatePassword
       }}
     >
       {children}
@@ -133,9 +156,12 @@ export function AuthProvider({ children }) {
 }
 
 export function useAuth() {
+
   const ctx = useContext(AuthContext);
+
   if (!ctx) {
     throw new Error("useAuth must be used within AuthProvider");
   }
+
   return ctx;
 }

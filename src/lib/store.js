@@ -206,6 +206,9 @@ export const initialMeetings = [
     bookId: "2", // Klara and the Sun
     date: new Date(2026, 2, 15),
     time: "6:00 PM",
+    duration: "1 hour",
+    plaftform: "zoom",
+    link: "https://meet.zoom.com/abc-defg-hij",
     description: "Discuss themes of AI, love, and sacrifice.",
     rsvps: ["You", "Siri", "Hema", "Pavani"],
     createdBy: "You",

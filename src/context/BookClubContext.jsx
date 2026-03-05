@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
 } from "react"
 
 import {
@@ -17,9 +18,12 @@ import {
   initialActivity,
 } from "../lib/store"
 
+import { supabase } from "@/integrations/supabase/client"
+
 const BookClubContext = createContext(null)
 
 export function BookClubProvider({ children }) {
+
   const [books, setBooks] = useState(initialBooks)
   const [discussions, setDiscussions] = useState(initialDiscussions)
   const [progress, setProgress] = useState(initialProgress)
@@ -31,7 +35,38 @@ export function BookClubProvider({ children }) {
   const [activity, setActivity] = useState(initialActivity)
   const [darkMode, setDarkMode] = useState(false)
 
-  /* 🔔 Notifications */
+  /* Load meetings from Supabase */
+  useEffect(() => {
+
+    const fetchMeetings = async () => {
+
+      const { data, error } = await supabase
+        .from("meetings")
+        .select("*")
+        .order("date", { ascending: true })
+
+      if (error) {
+        console.log("Fetch meetings error:", error.message)
+        return
+      }
+
+      const formatted = data.map((m) => ({
+        ...m,
+        rsvps: [],
+        time: "19:00",
+        duration: "1 hour",
+        platform: m.location || "zoom",
+        link: m.meeting_link
+      }))
+
+      setMeetings(formatted)
+    }
+
+    fetchMeetings()
+
+  }, [])
+
+  /* Notifications */
   const addNotification = useCallback((n) => {
     setNotifications((prev) => [
       { ...n, id: `n${Date.now()}`, date: new Date(), read: false },
@@ -39,7 +74,7 @@ export function BookClubProvider({ children }) {
     ])
   }, [])
 
-  /* 📊 Activity */
+  /* Activity */
   const addActivity = useCallback((a) => {
     setActivity((prev) => [
       { ...a, id: `ac${Date.now()}`, date: new Date() },
@@ -47,356 +82,166 @@ export function BookClubProvider({ children }) {
     ])
   }, [])
 
-  /* 📚 Add Book */
-  const addBook = useCallback(
-    (book) => {
-      const newBook = {
-        ...book,
-        id: `b${Date.now()}`,
-        votes: 0,
-        voters: [],
-        ratings: [],
-        reviews: [],
-        suggestedAt: new Date(),
-      }
+  /* Add Book */
+  const addBook = useCallback(async (book) => {
 
-      setBooks((prev) => [newBook, ...prev])
-
-      addNotification({
-        type: "suggestion",
-        message: `${book.suggestedBy} suggested '${book.title}'`,
+    const { data, error } = await supabase
+      .from("books")
+      .insert({
+        title: book.title,
+        author: book.author,
+        description: book.description,
+        genre: book.genre,
+        pages: book.pages,
+        suggested_by_name: book.suggestedBy
       })
+      .select()
+      .single()
 
-      addActivity({
-        type: "suggestion",
-        message: `suggested '${book.title}'`,
-        user: book.suggestedBy,
-      })
-    },
-    [addNotification, addActivity]
-  )
+    if (error) {
+      console.log("Book error:", error.message)
+      return
+    }
 
-  /* 🗳 Vote */
-  const voteBook = useCallback((bookId, userId) => {
-    setBooks((prev) =>
-      prev.map((b) => {
-        if (b.id !== bookId) return b
+    const newBook = {
+      ...data,
+      voters: [],
+      ratings: [],
+      reviews: [],
+    }
 
-        if (b.voters.includes(userId)) {
-          return {
-            ...b,
-            votes: b.votes - 1,
-            voters: b.voters.filter((v) => v !== userId),
-          }
-        }
+    setBooks((prev) => [newBook, ...prev])
 
-        return {
-          ...b,
-          votes: b.votes + 1,
-          voters: [...b.voters, userId],
-        }
-      })
-    )
-  }, [])
+    addNotification({
+      type: "suggestion",
+      message: `${book.suggestedBy} suggested '${book.title}'`,
+    })
 
-  /* 💬 Add Discussion */
-  const addDiscussion = useCallback(
-    (data) => {
-      const newDiscussion = {
-        id: `d${Date.now()}`,
-        ...data,
-        date: new Date(),
-        replies: [],
-      }
-
-      setDiscussions((prev) => [newDiscussion, ...prev])
-
-      addActivity({
-        type: "discussion",
-        message: `started a discussion on '${data.title}'`,
-        user: data.author,
-      })
-
-      addNotification({
-        type: "discussion",
-        message: `New discussion: ${data.title}`,
-      })
-    },
-    [addActivity, addNotification]
-  )
-
-  /* 💬 Add Reply */
-  const addReply = useCallback((discussionId, reply) => {
-    setDiscussions((prev) =>
-      prev.map((d) =>
-        d.id === discussionId
-          ? {
-              ...d,
-              replies: [
-                ...(d.replies || []),
-                {
-                  id: `r${Date.now()}`,
-                  ...reply,
-                  date: new Date(),
-                  likes: 0,
-                  likedBy: [],
-                },
-              ],
-            }
-          : d
-      )
-    )
-  }, [])
-
-  /* ❤️ Like Reply */
-  const likeReply = useCallback((discussionId, replyId, user) => {
-    setDiscussions((prev) =>
-      prev.map((d) => {
-        if (d.id !== discussionId) return d
-
-        return {
-          ...d,
-          replies: ( d.replies || []).map((r) => {
-            if (r.id !== replyId) return r
-
-            const likedBy = r.likedBy || []
-          const likes = r.likes || 0
-          const alreadyLiked = likedBy.includes(user)
-
-            return {
-              ...r,
-              likedBy: alreadyLiked
-              ? likedBy.filter((u) => u !== user)
-              : [...likedBy, user],
-            likes: alreadyLiked ? likes - 1 : likes + 1,
-            }
-          }),
-        }
-      })
-    )
-  }, [])
-
-  /* 📖 UPDATE PROGRESS (🔥 FIX ADDED) */
-  const updateProgress = useCallback(
-    (bookId, pagesRead) => {
-      setProgress((prev) => {
-        const existing = prev.find(
-          (p) => p.bookId === bookId && p.userId === "You"
-        )
-
-        if (existing) {
-          return prev.map((p) =>
-            p.bookId === bookId && p.userId === "You"
-              ? { ...p, pagesRead }
-              : p
-          )
-        }
-
-        return [
-          ...prev,
-          { bookId, userId: "You", pagesRead },
-        ]
-      })
-
-      addActivity({
-        type: "progress",
-        message: "updated reading progress",
-        user: "You",
-      })
-
-      addNotification({
-        type: "progress",
-        message: "Reading progress updated",
-      })
-    },
-    [addActivity, addNotification]
-  )
-
-  const updateGoalProgress = useCallback((goalId, value) => {
-  setGoals((prev) =>
-    prev.map((g) =>
-      g.id === goalId
-        ? {
-            ...g,
-            progress: Math.min(value, g.target),
-          }
-        : g
-    )
-  )
-
-  addActivity({
-    type: "goal",
-    message: "updated goal progress",
-    user: "You",
-  })
-
-  addNotification({
-    type: "goal",
-    message: "Goal progress updated",
-  })
-}, [addActivity, addNotification])
-
-const addGoal = useCallback((goal) => {
-  const newGoal = {
-    id: `g${Date.now()}`,
-    ...goal,
-    progress: 0,
-    createdAt: new Date(),
-  }
-
-  setGoals((prev) => [newGoal, ...prev])
-
-  addActivity({
-    type: "goal",
-    message: `created a new goal`,
-    user: "You",
-  })
-
-  addNotification({
-    type: "goal",
-    message: `New goal added`,
-  })
-}, [addActivity, addNotification])
-
-
-
-const addReview = useCallback(
-  (reviewData) => {
-    setBooks((prev) =>
-      prev.map((book) => {
-        if (book.id !== reviewData.bookId) return book
-
-        return {
-          ...book,
-          reviews: [
-            ...book.reviews,
-            {
-              id: `rev${Date.now()}`,
-              userId: reviewData.userId,
-              userName: reviewData.userName,
-              rating: reviewData.rating,
-              text: reviewData.text,
-              date: new Date(),
-              likes: 0,
-              likedBy: [],
-            },
-          ],
-          ratings: [
-            ...book.ratings,
-            { value: reviewData.rating },
-          ],
-        }
-      })
-    )
-
-  
     addActivity({
-      type: "review",
-      message: `reviewed a book`,
-      user: reviewData.userName,   // ← correct
+      type: "suggestion",
+      message: `suggested '${book.title}'`,
+      user: book.suggestedBy,
+    })
+
+  }, [addNotification, addActivity])
+
+  /* Add Discussion */
+  const addDiscussion = useCallback(async (data) => {
+
+    const { data: newDiscussion, error } = await supabase
+      .from("discussions")
+      .insert({
+        title: data.title,
+        content: data.content,
+        book_id: data.bookId,
+        author_name: data.author
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.log("Discussion error:", error.message)
+      return
+    }
+
+    setDiscussions((prev) => [
+      { ...newDiscussion, replies: [] },
+      ...prev
+    ])
+
+    addActivity({
+      type: "discussion",
+      message: `started a discussion on '${data.title}'`,
+      user: data.author,
     })
 
     addNotification({
-      type: "review",
-      message: `${reviewData.userName} added a review`,
+      type: "discussion",
+      message: `New discussion: ${data.title}`,
     })
-  },
-  [addActivity, addNotification]
-)
 
+  }, [addActivity, addNotification])
 
+  /* Add Meeting (RLS FIX) */
+  const addMeeting = useCallback(async (meeting) => {
 
-const addToLibrary = useCallback((bookId, shelf = "to-read") => {
-  setLibrary((prev) => {
-    const exists = prev.find(
-      (item) => item.bookId === bookId
+    const { data: { user } } = await supabase.auth.getUser()
+
+    const { data, error } = await supabase
+      .from("meetings")
+      .insert({
+        title: meeting.title,
+        date: meeting.date,
+        location: meeting.platform,
+        meeting_link: meeting.link,
+        created_by: user.id,
+        created_by_name: user.email
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.log("Meeting error:", error.message)
+      return
+    }
+
+    const newMeeting = {
+      ...data,
+      rsvps: [],
+      time: meeting.time,
+      duration: meeting.duration,
+      platform: meeting.platform,
+      link: meeting.link
+    }
+
+    setMeetings((prev) => [newMeeting, ...prev])
+
+    addNotification({
+      type: "meeting",
+      message: `New meeting scheduled: ${meeting.title}`,
+    })
+
+    addActivity({
+      type: "meeting",
+      message: `scheduled a meeting`,
+      user: "You",
+    })
+
+  }, [addNotification, addActivity])
+
+  /* RSVP Meeting */
+  const rsvpMeeting = useCallback((meetingId, userName) => {
+
+    setMeetings((prev) =>
+      prev.map((m) => {
+
+        if (m.id !== meetingId) return m
+
+        const alreadyGoing = (m.rsvps || []).includes(userName)
+
+        return {
+          ...m,
+          rsvps: alreadyGoing
+            ? m.rsvps.filter((u) => u !== userName)
+            : [...m.rsvps, userName],
+        }
+
+      })
     )
 
-    if (exists) return prev
+  }, [])
 
-    return [
-      ...prev,
-      {
-        id: `lib${Date.now()}`,
-        bookId,
-        shelf,
-        userId: "You",
-        notes: "",     
-        tags: [],  
-        addedAt: new Date(),
-      },
-    ]
-  })
-
-  addNotification({
-    type: "library",
-    message: "Book added to your library",
-  })
-
-  addActivity({
-    type: "library",
-    message: "added a book to library",
-    user: "You",
-  })
-}, [addNotification, addActivity])
-const moveToShelf = useCallback((bookId, newShelf) => {
-  setLibrary((prev) =>
-    prev.map((item) =>
-      item.bookId === bookId
-        ? { ...item, shelf: newShelf }
-        : item
-    )
-  )
-}, [])
-
-
-const addMeeting = useCallback((meeting) => {
-  const newMeeting = {
-    id: `m${Date.now()}`,
-     rsvps: [], 
-    ...meeting,
-    createdAt: new Date(),
-  }
-
-  setMeetings((prev) => [newMeeting, ...prev])
-
-  addNotification({
-    type: "meeting",
-    message: `New meeting scheduled: ${meeting.title}`,
-  })
-
-  addActivity({
-    type: "meeting",
-    message: `scheduled a meeting`,
-    user: "You",
-  })
-}, [addNotification, addActivity])
-const rsvpMeeting = useCallback((meetingId, userName) => {
-  setMeetings((prev) =>
-    prev.map((m) => {
-      if (m.id !== meetingId) return m
-
-      const alreadyGoing = m.rsvps.includes(userName)
-
-      return {
-        ...m,
-        rsvps: alreadyGoing
-          ? m.rsvps.filter((u) => u !== userName)
-          : [...m.rsvps, userName],
-      }
-    })
-  )
-}, [])
-    
-
-
-  /* 🌙 Dark Mode */
+  /* Dark Mode */
   const toggleDarkMode = useCallback(() => {
+
     setDarkMode((prev) => {
+
       const next = !prev
       document.documentElement.classList.toggle("dark", next)
+
       return next
     })
+
   }, [])
 
   return (
@@ -414,19 +259,10 @@ const rsvpMeeting = useCallback((meetingId, userName) => {
         activity,
         darkMode,
         addBook,
-        voteBook,
         toggleDarkMode,
         addNotification,
         addDiscussion,
-        addReply,
-        likeReply,
-        updateProgress, 
-        updateGoalProgress,
-        addGoal,
-        addReview,
-        addToLibrary,
         addMeeting,
-        moveToShelf, 
       }}
     >
       {children}
@@ -435,11 +271,14 @@ const rsvpMeeting = useCallback((meetingId, userName) => {
 }
 
 export function useBookClub() {
+
   const ctx = useContext(BookClubContext)
+
   if (!ctx) {
     throw new Error(
       "useBookClub must be used within BookClubProvider"
     )
   }
+
   return ctx
 }
