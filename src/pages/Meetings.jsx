@@ -1,9 +1,10 @@
-import { useState } from "react"
+import { useState, useEffect  } from "react"
 import { useBookClub } from "@/context/BookClubContext"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
+import { supabase } from "@/integrations/supabase/client"
 
 import {
   Select,
@@ -32,6 +33,13 @@ export default function Meetings() {
   const { meetings, books, addMeeting, rsvpMeeting } = useBookClub()
 
   const [open, setOpen] = useState(false)
+  const [user, setUser] = useState(null)
+
+   useEffect(() => {
+  supabase.auth.getUser().then(({ data }) => {
+    setUser(data.user)
+  })
+}, [])
 
   const [form, setForm] = useState({
     title: "",
@@ -259,7 +267,7 @@ export default function Meetings() {
 
             const book = books.find((b) => b.id === m.bookId)
 
-            const isRsvpd = (m.rsvps || []).includes("You")
+            const isRsvpd = (m.rsvps || []).includes(user?.id)
 
             return (
 
@@ -307,7 +315,7 @@ export default function Meetings() {
                         <Button
                           variant={isRsvpd ? "default" : "outline"}
                           size="sm"
-                          onClick={() => rsvpMeeting(m.id, "You")}
+                          onClick={() => rsvpMeeting(m.id)}
                         >
                           {isRsvpd ? "Going ✓" : "RSVP"}
                         </Button>

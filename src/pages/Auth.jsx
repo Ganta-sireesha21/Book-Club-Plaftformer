@@ -29,6 +29,7 @@ export default function Auth() {
         const { error } = await signIn(email, password);
 
         if (error) {
+          
           toast({
             title: "Login failed",
             description: error,
@@ -44,6 +45,7 @@ export default function Auth() {
         const { error } = await signUp(email, password, displayName);
 
         if (error) {
+          console.log("Supabase signup error:", error);
           toast({
             title: "Signup failed",
             description: error,

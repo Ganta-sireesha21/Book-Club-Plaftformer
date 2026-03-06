@@ -49,10 +49,15 @@ export function BookClubProvider({ children }) {
         console.log("Fetch meetings error:", error.message)
         return
       }
+      const { data: rsvpData } = await supabase
+      .from("meeting_rsvps")
+      .select("*")
 
       const formatted = data.map((m) => ({
         ...m,
-        rsvps: [],
+        rsvps: rsvpData
+        .filter((r) => r.meeting_id === m.id)
+        .map((r) => r.user_id),
         time: "19:00",
         duration: "1 hour",
         platform: m.location || "zoom",
@@ -210,26 +215,53 @@ export function BookClubProvider({ children }) {
   }, [addNotification, addActivity])
 
   /* RSVP Meeting */
-  const rsvpMeeting = useCallback((meetingId, userName) => {
+  const rsvpMeeting = useCallback(async (meetingId) => {
 
-    setMeetings((prev) =>
-      prev.map((m) => {
+  const { data: { user } } = await supabase.auth.getUser()
 
-        if (m.id !== meetingId) return m
+  if (!user) return
 
-        const alreadyGoing = (m.rsvps || []).includes(userName)
+  const { data: existing } = await supabase
+    .from("meeting_rsvps")
+    .select("*")
+    .eq("meeting_id", meetingId)
+    .eq("user_id", user.id)
+    .maybeSingle()
 
-        return {
-          ...m,
-          rsvps: alreadyGoing
-            ? m.rsvps.filter((u) => u !== userName)
-            : [...m.rsvps, userName],
-        }
+  if (existing) {
 
+    await supabase
+      .from("meeting_rsvps")
+      .delete()
+      .eq("meeting_id", meetingId)
+      .eq("user_id", user.id)
+
+  } else {
+
+    await supabase
+      .from("meeting_rsvps")
+      .insert({
+        meeting_id: meetingId,
+        user_id: user.id
       })
-    )
 
-  }, [])
+  }
+
+  // reload RSVP data
+  const { data: rsvpData } = await supabase
+    .from("meeting_rsvps")
+    .select("*")
+
+  setMeetings((prev) =>
+    prev.map((m) => ({
+      ...m,
+      rsvps: rsvpData
+        .filter((r) => r.meeting_id === m.id)
+        .map((r) => r.user_id)
+    }))
+  )
+
+}, [])
 
   /* Dark Mode */
   const toggleDarkMode = useCallback(() => {
